@@ -171,12 +171,12 @@ contract PoolManager is IPoolManager, Owned, NoDelegateCall, ERC1155, IERC1155Re
     }
 
     /// @inheritdoc IPoolManager
-    function lock(bytes calldata data) external override returns (bytes memory result) {
+    function lock(address lockTarget, bytes calldata data) external override returns (bytes memory result) {
         uint256 id = lockedBy.length;
-        lockedBy.push(msg.sender);
+        lockedBy.push(lockTarget);
 
         // the caller does everything in this callback, including paying what they owe via calls to settle
-        result = ILockCallback(msg.sender).lockAcquired(id, data);
+        result = ILockCallback(lockTarget).lockAcquired(id, data);
 
         unchecked {
             LockState storage lockState = lockStates[id];

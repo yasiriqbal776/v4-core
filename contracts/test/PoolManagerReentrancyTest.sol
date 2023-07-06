@@ -17,7 +17,7 @@ contract PoolManagerReentrancyTest is ILockCallback {
     function helper(IPoolManager poolManager, Currency currencyToBorrow, uint256 total, uint256 count) internal {
         // check that it is currently already locked `total-count` times, ...
         assert(poolManager.lockedByLength() == total - count);
-        poolManager.lock(abi.encode(currencyToBorrow, total, count));
+        poolManager.lock(address(this), abi.encode(currencyToBorrow, total, count));
         // and still has that many locks after this particular lock is released
         assert(poolManager.lockedByLength() == total - count);
     }
