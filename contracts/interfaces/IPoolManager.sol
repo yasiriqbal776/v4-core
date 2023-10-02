@@ -10,7 +10,7 @@ import {IFees} from "./IFees.sol";
 import {BalanceDelta} from "../types/BalanceDelta.sol";
 import {PoolId} from "../types/PoolId.sol";
 import {Position} from "../libraries/Position.sol";
-import {LockSentinel} from "../types/LockSentinel.sol";
+import {LockData} from "../types/LockData.sol";
 
 interface IPoolManager is IFees, IERC1155 {
     /// @notice Thrown when currencies touched has exceeded max of 256
@@ -116,8 +116,8 @@ interface IPoolManager is IFees, IERC1155 {
     /// @notice Returns the locker in the ith position of the locker queue.
     function getLock(uint256 i) external view returns (address locker);
 
-    /// @notice Returns the sentinel node for the LockData structure.
-    function getLockSentinel() external view returns (LockSentinel sentinel);
+    /// @notice Returns the lock data (length and nonzeroDeltaCount) for the lock data structure.
+    function getLockData() external view returns (LockData lockData);
 
     /// @notice Initialize the state for a given pool ID
     function initialize(PoolKey memory key, uint160 sqrtPriceX96, bytes calldata hookData)

@@ -7,7 +7,7 @@ import {IPoolManager} from "../../contracts/interfaces/IPoolManager.sol";
 import {Deployers} from "./utils/Deployers.sol";
 import {ILockCallback} from "../../contracts/interfaces/callback/ILockCallback.sol";
 import {LockDataLibrary} from "../../contracts/libraries/LockDataLibrary.sol";
-import {LockSentinel} from "../../contracts/types/LockSentinel.sol";
+import {LockData} from "../../contracts/types/LockData.sol";
 
 contract LockDataLibraryTest is Test, Deployers, ILockCallback {
     PoolManager manager;
@@ -17,13 +17,13 @@ contract LockDataLibraryTest is Test, Deployers, ILockCallback {
     }
 
     function testLockerLength() public {
-        LockSentinel sentinelDuringLockCallback = abi.decode(manager.lock(""), (LockSentinel));
-        assertEq(sentinelDuringLockCallback.length(), 1);
+        LockData dataDuringLockCallback = abi.decode(manager.lock(""), (LockData));
+        assertEq(dataDuringLockCallback.length(), 1);
     }
 
     function lockAcquired(bytes calldata) public view returns (bytes memory) {
-        LockSentinel sentinel = manager.getLockSentinel();
-        bytes memory lockData = abi.encode(sentinel);
-        return lockData;
+        LockData lockData = manager.getLockData();
+        bytes memory data = abi.encode(lockData);
+        return data;
     }
 }

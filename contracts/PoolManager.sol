@@ -21,7 +21,7 @@ import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {PoolId, PoolIdLibrary} from "./types/PoolId.sol";
 import {BalanceDelta} from "./types/BalanceDelta.sol";
-import {LockSentinel} from "./types/LockSentinel.sol";
+import {LockData} from "./types/LockData.sol";
 
 /// @notice Holds the state for all pools
 contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Receiver {
@@ -135,36 +135,36 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
 
     /// @inheritdoc IPoolManager
     function lock(bytes calldata data) external override returns (bytes memory result) {
-        LockSentinel sentinel = LockDataLibrary.getLockSentinel();
-        sentinel.push(msg.sender);
+        LockData lockData = LockDataLibrary.getLockData();
+        lockData.push(msg.sender);
 
         // the caller does everything in this callback, including paying what they owe via calls to settle
         result = ILockCallback(msg.sender).lockAcquired(data);
 
-        sentinel = LockDataLibrary.getLockSentinel();
-        if (sentinel.length() == 1) {
-            if (sentinel.nonzeroDeltaCount() != 0) revert CurrencyNotSettled();
-            sentinel.update(0, 0);
+        lockData = LockDataLibrary.getLockData();
+        if (lockData.length() == 1) {
+            if (lockData.nonzeroDeltaCount() != 0) revert CurrencyNotSettled();
+            lockData.update(0, 0);
         } else {
-            sentinel.pop();
+            lockData.pop();
         }
     }
 
     function _accountDelta(Currency currency, int128 delta) internal {
         if (delta == 0) return;
 
-        LockSentinel sentinel = LockDataLibrary.getLockSentinel();
-        address locker = sentinel.getActiveLock();
+        LockData lockData = LockDataLibrary.getLockData();
+        address locker = lockData.getActiveLock();
         int256 current = currencyDelta[locker][currency];
         int256 next = current + delta;
 
-        uint128 nonzeroDeltaCount = sentinel.nonzeroDeltaCount();
+        uint128 nonzeroDeltaCount = lockData.nonzeroDeltaCount();
 
         unchecked {
             if (next == 0) {
-                sentinel.update(sentinel.length(), nonzeroDeltaCount - 1);
+                lockData.update(lockData.length(), nonzeroDeltaCount - 1);
             } else if (current == 0) {
-                sentinel.update(sentinel.length(), nonzeroDeltaCount + 1);
+                lockData.update(lockData.length(), nonzeroDeltaCount + 1);
             }
         }
 
@@ -178,7 +178,7 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
     }
 
     modifier onlyByLocker() {
-        address locker = LockDataLibrary.getLockSentinel().getActiveLock();
+        address locker = LockDataLibrary.getLockData().getActiveLock();
         if (msg.sender != locker) revert LockedBy(locker);
         _;
     }
@@ -413,8 +413,8 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
         return value;
     }
 
-    function getLockSentinel() external view returns (LockSentinel sentinel) {
-        return LockDataLibrary.getLockSentinel();
+    function getLockData() external view returns (LockData lockData) {
+        return LockDataLibrary.getLockData();
     }
 
     /// @notice receive native tokens for native pools

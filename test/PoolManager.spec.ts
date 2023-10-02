@@ -107,17 +107,6 @@ describe('PoolManager', () => {
     expect(((await waffle.provider.getCode(manager.address)).length - 2) / 2).to.matchSnapshot()
   })
 
-  describe('#setProtocolFeeController', () => {
-    it('allows the owner to set a fee controller', async () => {
-      expect(await manager.protocolFeeController()).to.be.eq(ADDRESS_ZERO)
-      await expect(manager.setProtocolFeeController(feeControllerTest.address)).to.emit(
-        manager,
-        'ProtocolFeeControllerUpdated'
-      )
-      expect(await manager.protocolFeeController()).to.be.eq(feeControllerTest.address)
-    })
-  })
-
   describe('#take', () => {
     it('fails if no liquidity', async () => {
       await tokens.currency0.connect(wallet).transfer(ADDRESS_ZERO, constants.MaxUint256.div(2))
@@ -149,11 +138,15 @@ describe('PoolManager', () => {
       }
       await invalidToken.approve(modifyPositionTest.address, constants.MaxUint256)
       await manager.initialize(key, encodeSqrtPriceX96(1, 1), '0x00')
-      await modifyPositionTest.modifyPosition(key, {
-        tickLower: -60,
-        tickUpper: 60,
-        liquidityDelta: 100,
-      })
+      await modifyPositionTest.modifyPosition(
+        key,
+        {
+          tickLower: -60,
+          tickUpper: 60,
+          liquidityDelta: 100,
+        },
+        '0x00'
+      )
 
       await tokens.currency0.connect(wallet).approve(takeTest.address, MaxUint128)
       await invalidToken.connect(wallet).approve(takeTest.address, MaxUint128)
@@ -173,11 +166,15 @@ describe('PoolManager', () => {
         tickSpacing: 10,
       }
       await manager.initialize(key, encodeSqrtPriceX96(1, 1), '0x00')
-      await modifyPositionTest.modifyPosition(key, {
-        tickLower: -60,
-        tickUpper: 60,
-        liquidityDelta: 100,
-      })
+      await modifyPositionTest.modifyPosition(
+        key,
+        {
+          tickLower: -60,
+          tickUpper: 60,
+          liquidityDelta: 100,
+        },
+        '0x00'
+      )
 
       await tokens.currency0.connect(wallet).approve(takeTest.address, MaxUint128)
 
@@ -201,6 +198,7 @@ describe('PoolManager', () => {
           tickUpper: 60,
           liquidityDelta: 100,
         },
+        '0x00',
         { value: 100 }
       )
 
@@ -272,11 +270,15 @@ describe('PoolManager', () => {
         expect(protocolFees).to.eq(BigNumber.from(poolProtocolFee).shl(12))
 
         // add liquidity around the initial price
-        await modifyPositionTest.modifyPosition(poolKey, {
-          tickLower: -120,
-          tickUpper: 120,
-          liquidityDelta: expandTo18Decimals(10),
-        })
+        await modifyPositionTest.modifyPosition(
+          poolKey,
+          {
+            tickLower: -120,
+            tickUpper: 120,
+            liquidityDelta: expandTo18Decimals(10),
+          },
+          '0x00'
+        )
       })
 
       it('allows the owner to collect accumulated fees', async () => {
@@ -296,7 +298,8 @@ describe('PoolManager', () => {
           {
             withdrawTokens: true,
             settleUsingTransfer: true,
-          }
+          },
+          '0x00'
         )
 
         const expectedFees = 7
@@ -338,7 +341,8 @@ describe('PoolManager', () => {
           {
             withdrawTokens: true,
             settleUsingTransfer: true,
-          }
+          },
+          '0x00'
         )
 
         const expectedFees = 7
@@ -395,6 +399,7 @@ describe('PoolManager', () => {
             tickUpper: 120,
             liquidityDelta: expandTo18Decimals(10),
           },
+          '0x00',
           {
             value: expandTo18Decimals(10),
           }
@@ -419,6 +424,7 @@ describe('PoolManager', () => {
             withdrawTokens: true,
             settleUsingTransfer: true,
           },
+          '0x00',
           {
             value: 10000,
           }
@@ -464,6 +470,7 @@ describe('PoolManager', () => {
             withdrawTokens: true,
             settleUsingTransfer: true,
           },
+          '0x00',
           {
             value: 10000,
           }
