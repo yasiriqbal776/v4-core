@@ -8,6 +8,9 @@ import {ILockCallback} from "../interfaces/callback/ILockCallback.sol";
 import {IPoolManager} from "../interfaces/IPoolManager.sol";
 import {BalanceDelta} from "../types/BalanceDelta.sol";
 import {PoolKey} from "../types/PoolKey.sol";
+import {Hooks} from "../libraries/Hooks.sol";
+
+import "forge-std/console2.sol";
 
 contract PoolModifyPositionTest is ILockCallback {
     using CurrencyLibrary for Currency;
@@ -44,6 +47,15 @@ contract PoolModifyPositionTest is ILockCallback {
         CallbackData memory data = abi.decode(rawData, (CallbackData));
 
         BalanceDelta delta = manager.modifyPosition(data.key, data.params, data.hookData);
+
+        if (Hooks.shouldAccessLock(data.key.hooks)) {
+            // just doing currency1 rn
+            int256 currencyToPay = manager.currencyDelta(address(this), data.key.currency1);
+            IERC20Minimal(Currency.unwrap(data.key.currency1)).transferFrom(
+                data.sender, address(manager), uint256(currencyToPay)
+            );
+            manager.settle(data.key.currency1);
+        }
 
         if (delta.amount0() > 0) {
             if (data.key.currency0.isNative()) {

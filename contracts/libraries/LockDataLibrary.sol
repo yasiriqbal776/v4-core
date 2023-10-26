@@ -8,8 +8,13 @@ import {IPoolManager} from "../interfaces/IPoolManager.sol";
 ///      always passed in as IPoolManager.LockData storage self, stores not just the current
 ///      length of the queue but also the global count of non-zero deltas across all lockers.
 ///      The values of the data structure start at OFFSET, and each value is a locker address.
+
+import "forge-std/console2.sol";
+
 library LockDataLibrary {
     uint256 private constant OFFSET = uint256(keccak256("LockData"));
+
+    uint256 private constant HOOK_ADDR_OFFSET = uint256(keccak256("HookAddress"));
 
     /// @dev Pushes a locker onto the end of the queue, and updates the sentinel storage slot.
     function push(IPoolManager.LockData storage self, address locker) internal {

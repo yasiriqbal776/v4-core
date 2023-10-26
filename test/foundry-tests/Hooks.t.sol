@@ -20,7 +20,11 @@ import {Deployers} from "./utils/Deployers.sol";
 import {Fees} from "../../contracts/Fees.sol";
 import {PoolId} from "../../contracts/types/PoolId.sol";
 import {PoolKey} from "../../contracts/types/PoolKey.sol";
+import {AccessLockHook} from "../../contracts/test/AccessLockHook.sol";
 
+import "forge-std/console2.sol";
+
+// TODO update tests for access lock flag
 contract HooksTest is Test, Deployers, GasSnapshot {
     address payable ALL_HOOKS_ADDRESS = payable(0xfF00000000000000000000000000000000000000);
     MockHooks mockHooks;
@@ -29,12 +33,19 @@ contract HooksTest is Test, Deployers, GasSnapshot {
     PoolModifyPositionTest modifyPositionRouter;
     PoolSwapTest swapRouter;
     PoolDonateTest donateRouter;
+    AccessLockHook accessLockHook;
 
     function setUp() public {
         MockHooks impl = new MockHooks();
         vm.etch(ALL_HOOKS_ADDRESS, address(impl).code);
         mockHooks = MockHooks(ALL_HOOKS_ADDRESS);
         (manager, key,) = Deployers.createFreshPool(mockHooks, 3000, SQRT_RATIO_1_1);
+
+        address accessLockAddress =
+            address(uint160(Hooks.ACCESS_LOCK_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_MODIFY_POSITION_FLAG));
+        deployCodeTo("AccessLockHook.sol", abi.encode(manager), accessLockAddress);
+        accessLockHook = AccessLockHook(accessLockAddress);
+
         modifyPositionRouter = new PoolModifyPositionTest(IPoolManager(address(manager)));
         swapRouter = new PoolSwapTest(IPoolManager(address(manager)));
         donateRouter = new PoolDonateTest(IPoolManager(address(manager)));
@@ -172,7 +183,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -199,7 +212,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertTrue(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -226,7 +241,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -252,7 +269,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertTrue(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -278,7 +297,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -304,7 +325,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -331,7 +354,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -358,7 +383,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertTrue(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -384,7 +411,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: true,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -410,7 +439,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: true,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -436,7 +467,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: true,
                 afterSwap: true,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -462,7 +495,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: true,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -488,7 +523,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: true
+                afterDonate: true,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -514,7 +551,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: true,
-                afterDonate: true
+                afterDonate: true,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertFalse(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -540,7 +579,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: true,
                 afterSwap: true,
                 beforeDonate: true,
-                afterDonate: true
+                afterDonate: true,
+                accessLock: false,
+                overrideSelector: false
             })
         );
         assertTrue(Hooks.shouldCallBeforeInitialize(hookAddr));
@@ -568,7 +609,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: true,
                 afterSwap: true,
                 beforeDonate: true,
-                afterDonate: true
+                afterDonate: true,
+                accessLock: false,
+                overrideSelector: false
             })
         );
     }
@@ -588,7 +631,9 @@ contract HooksTest is Test, Deployers, GasSnapshot {
                 beforeSwap: false,
                 afterSwap: false,
                 beforeDonate: false,
-                afterDonate: false
+                afterDonate: false,
+                accessLock: false,
+                overrideSelector: false
             })
         );
     }
@@ -640,5 +685,33 @@ contract HooksTest is Test, Deployers, GasSnapshot {
         modifyPositionRouter.modifyPosition(
             key, IPoolManager.ModifyPositionParams(tickLower, tickUpper, amount), ZERO_BYTES
         );
+    }
+
+    function testAccessLock() public {
+        (Currency currency0, Currency currency1) = deployCurrencies(100 * 10e18);
+
+        PoolKey memory key1 = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 3000,
+            tickSpacing: int24(3000 / 100 * 2),
+            hooks: accessLockHook
+        });
+
+        manager.initialize(key1, SQRT_RATIO_1_1, ZERO_BYTES);
+
+        MockERC20(Currency.unwrap(currency0)).mint(address(this), 4 * 10 ** 18);
+        MockERC20(Currency.unwrap(currency1)).mint(address(this), 5 * 10 ** 18);
+
+        uint256 balanceOfBefore = IERC20Minimal(Currency.unwrap(currency1)).balanceOf(address(this));
+        IERC20Minimal(Currency.unwrap(currency0)).approve(address(modifyPositionRouter), 10 ** 18);
+        IERC20Minimal(Currency.unwrap(currency1)).approve(address(modifyPositionRouter), 2 * 10 ** 18);
+        bytes memory hookAmountToTake = abi.encode(2 * 10 ** 18);
+        modifyPositionRouter.modifyPosition(
+            key1, IPoolManager.ModifyPositionParams(0, 60, 1 * 10 ** 18), hookAmountToTake
+        );
+        uint256 balanceOfAfter = IERC20Minimal(Currency.unwrap(currency1)).balanceOf(address(this));
+
+        assertEq(balanceOfBefore - balanceOfAfter, 2 * 10 ** 18);
     }
 }

@@ -22,6 +22,8 @@ import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Re
 import {PoolId, PoolIdLibrary} from "./types/PoolId.sol";
 import {BalanceDelta} from "./types/BalanceDelta.sol";
 
+import "forge-std/console2.sol";
+
 /// @notice Holds the state for all pools
 contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Receiver {
     using PoolIdLibrary for PoolKey;
@@ -52,6 +54,9 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
     mapping(PoolId id => Pool.State) public pools;
 
     constructor(uint256 controllerGasLimit) Fees(controllerGasLimit) ERC1155("") {}
+
+    // todo change to transient storage
+    address currentHook;
 
     function _getPool(PoolKey memory key) private view returns (Pool.State storage) {
         return pools[key.toId()];
@@ -176,8 +181,13 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
     }
 
     modifier onlyByLocker() {
+        // todo fix stack too deep :/
         address locker = lockData.getActiveLock();
-        if (msg.sender != locker) revert LockedBy(locker);
+        if (msg.sender != locker) {
+            if (msg.sender != currentHook && !Hooks.shouldAccessLock(IHooks(currentHook))) {
+                revert LockedBy(locker);
+            }
+        }
         _;
     }
 
@@ -187,11 +197,15 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
         IPoolManager.ModifyPositionParams memory params,
         bytes calldata hookData
     ) external override noDelegateCall onlyByLocker returns (BalanceDelta delta) {
+        _setCurrentHook(address(key.hooks));
+
         if (key.hooks.shouldCallBeforeModifyPosition()) {
-            if (
-                key.hooks.beforeModifyPosition(msg.sender, key, params, hookData)
-                    != IHooks.beforeModifyPosition.selector
-            ) {
+            bytes4 hookReturn = key.hooks.beforeModifyPosition(msg.sender, key, params, hookData);
+
+            if (hookReturn == Hooks.OVERRIDE_SELECTOR) {
+                return delta;
+            }
+            if (hookReturn != IHooks.beforeModifyPosition.selector) {
                 revert Hooks.InvalidHookResponse();
             }
         }
@@ -245,8 +259,14 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
         onlyByLocker
         returns (BalanceDelta delta)
     {
+        _setCurrentHook(address(key.hooks));
+
         if (key.hooks.shouldCallBeforeSwap()) {
-            if (key.hooks.beforeSwap(msg.sender, key, params, hookData) != IHooks.beforeSwap.selector) {
+            bytes4 hookReturn = key.hooks.beforeSwap(msg.sender, key, params, hookData);
+            if (hookReturn == Hooks.OVERRIDE_SELECTOR) {
+                return delta;
+            }
+            if (hookReturn != IHooks.beforeSwap.selector) {
                 revert Hooks.InvalidHookResponse();
             }
         }
@@ -313,8 +333,13 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
         onlyByLocker
         returns (BalanceDelta delta)
     {
+        _setCurrentHook(address(key.hooks));
         if (key.hooks.shouldCallBeforeDonate()) {
-            if (key.hooks.beforeDonate(msg.sender, key, amount0, amount1, hookData) != IHooks.beforeDonate.selector) {
+            bytes4 hookReturn = key.hooks.beforeDonate(msg.sender, key, amount0, amount1, hookData);
+            if (hookReturn == Hooks.OVERRIDE_SELECTOR) {
+                return delta;
+            }
+            if (hookReturn != IHooks.beforeDonate.selector) {
                 revert Hooks.InvalidHookResponse();
             }
         }
@@ -409,6 +434,11 @@ contract PoolManager is IPoolManager, Fees, NoDelegateCall, ERC1155, IERC1155Rec
         }
 
         return value;
+    }
+
+    // TODO to use transient storage
+    function _setCurrentHook(address hookAddr) internal {
+        currentHook = hookAddr;
     }
 
     /// @notice receive native tokens for native pools
